@@ -1,5 +1,6 @@
 package server;
 
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -14,6 +15,7 @@ public class ServerWindow extends JFrame {
     ServerSocket server;
     private Vector clients = new Vector();
     JTable hallTable;
+    JTable timeListTable;
     TextArea infoTxt;
     Connection c = null;
     Statement stmt;
@@ -21,6 +23,7 @@ public class ServerWindow extends JFrame {
     String selectedId;
     private DefaultTableModel tableModel;   //表格模型对象
     private DefaultTableModel hallTableModel;   //表格模型对象
+    private DefaultTableModel timeListTableModel;   //表格模型对象
 
     ServerWindow(String windowName) {
         super(windowName);
@@ -33,7 +36,7 @@ public class ServerWindow extends JFrame {
         JButton add = new JButton("Add Movie");
         JButton editHall = new JButton("Edit");
         JButton deleteHall = new JButton("Delete");
-        JButton addHall = new JButton("Add Movie");
+        JButton addHall = new JButton("Add Movie Hall");
         Box addMovie = new Box(2);
         JTextField movieName = new JTextField();
         JTextField hallName = new JTextField();
@@ -52,8 +55,16 @@ public class ServerWindow extends JFrame {
                 return false;
             }
         };
+        String[] timeListColumn = {"TimeList"};
+        timeListTableModel = new DefaultTableModel(data, timeListColumn) {
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         table = new JTable(tableModel);
         hallTable = new JTable(hallTableModel);
+        timeListTable = new JTable(timeListTableModel);
 
         infoTxt = new TextArea();
         hallList.add(hallTable, BorderLayout.CENTER);
@@ -103,11 +114,32 @@ public class ServerWindow extends JFrame {
             }
         });
 
+        deleteHall.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = hallTable.getSelectedRow();
+                String value = (String) hallTableModel.getValueAt(row, 0);
+                selectedId = value;
+                String sql = "DELETE FROM HALL WHERE ID=?";
+                try {
+                    PreparedStatement ps = c.prepareStatement(sql);
+                    ps.setString(1, selectedId);
+                    ps.executeUpdate();
+                    sql = "DELETE FROM TIMELIST WHERE ID=?";
+                    ps.setString(1, selectedId);
+                    ps.executeUpdate();
+                    updateHallTable();
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        });
+
         delete.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int row = table.getSelectedRow();
-                String value = (String) tableModel.getValueAt(row, 0);
+                String value = (String) hallTableModel.getValueAt(row, 0);
                 selectedId = value;
                 String sql = "DELETE FROM MOVIE WHERE ID=?";
                 try {
@@ -138,10 +170,86 @@ public class ServerWindow extends JFrame {
             }
         });
 
+        addHall.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (hallName.getText().length() == 0) return;
+                try {
+                    String sql = "INSERT INTO HALL VALUES(?,?)";
+                    PreparedStatement pstmt = c.prepareStatement(sql);
+                    pstmt.setString(1, hallName.getText());
+                    pstmt.setString(2, "00000000000000000000000000000000000000000000000000000000000000000000000000000000");
+                    pstmt.executeUpdate();
+                    updateHallTable();
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        });
+
+        editHall.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = hallTable.getSelectedRow();
+                String hallID = (String) hallTable.getValueAt(row, 0);
+                updateTimeListTable(hallID);
+                showEditTimeList(hallID);
+            }
+        });
+
         updateTable();
         updateHallTable();
 
         new Listening(this.port).start();
+    }
+
+    void showEditTimeList(String hallID){
+        EditTimeList aWindow = new EditTimeList(hallID, this);
+        Toolkit theKit = aWindow.getToolkit();
+        Dimension wndSize = theKit.getScreenSize();  // Get screen size
+        aWindow.setBounds(wndSize.width / 4, wndSize.height / 4,   // Position
+                wndSize.width / 2, wndSize.height / 2);  // Size
+        aWindow.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        aWindow.setVisible(true);
+    }
+
+    void deleteTimeList(String hallID, String movieID, String time){
+        Timestamp ts = Timestamp.valueOf(time);
+        String sql = "DELETE FROM MOVIE WHERE ID=? AND HALL=? AND TIME=?";
+        try {
+            PreparedStatement pstmt = c.prepareStatement(sql);
+            pstmt.setString(1, hallID);
+            pstmt.setString(2, movieID);
+            pstmt.setTimestamp(3, ts);
+            pstmt.executeUpdate();
+            updateTimeListTable(hallID);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void addTimeList(String hallID, String movieID, String time) {
+        try{
+            String sql = "SELECT * FROM MOVIE WHERE ID=?";
+            PreparedStatement pstmt = c.prepareStatement(sql);
+            pstmt.setString(1, movieID);
+            ResultSet rs = pstmt.executeQuery();
+            if(!rs.next()){
+                JOptionPane.showMessageDialog(null, "Movie not exsist.", "Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            Timestamp ts = Timestamp.valueOf(time);
+            sql = "INSERT INTO TIMELIST VALUES(?,?,?)";
+            pstmt = c.prepareStatement(sql);
+            pstmt.setString(2, hallID);
+            pstmt.setString(1, movieID);
+            pstmt.setTimestamp(3, ts);
+            pstmt.executeUpdate();
+            updateTimeListTable(hallID);
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, "TIME format: 2018-4-1 23:22:22", "Error", JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     void showEditInfo(byte[] bytes, String info) {
@@ -176,11 +284,37 @@ public class ServerWindow extends JFrame {
         }
     }
 
+    void updateTimeListTable(String hallID) {
+        try {
+            String[][] data = {};
+            String[] column = {"Movie name", "Time"};
+            timeListTableModel = new DefaultTableModel(data, column) {
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+            String sql = "SELECT * FROM TIMELIST WHERE HALL=? ORDER BY TIME";
+            PreparedStatement pstmt = c.prepareStatement(sql);
+            pstmt.setString(1, hallID);
+            System.out.println(hallID);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String tmp = rs.getString("MOVIE");
+                String tmp2 = rs.getTimestamp("TIME").toString();
+                String[] row = {tmp, tmp2};
+                timeListTableModel.addRow(row);
+            }
+            timeListTable.setModel(timeListTableModel);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     void updateHallTable() {
         try {
             String[][] data = {};
             String[] column = {"Hall"};
-            tableModel = new DefaultTableModel(data, column) {
+            hallTableModel = new DefaultTableModel(data, column) {
                 public boolean isCellEditable(int row, int column) {
                     return false;
                 }
@@ -190,9 +324,9 @@ public class ServerWindow extends JFrame {
             while (rs.next()) {
                 String tmp = rs.getString("ID");
                 String[] row = {tmp};
-                tableModel.addRow(row);
+                hallTableModel.addRow(row);
             }
-            table.setModel(tableModel);
+            hallTable.setModel(hallTableModel);
         } catch (SQLException e) {
             e.printStackTrace();
         }
