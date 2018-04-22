@@ -106,7 +106,9 @@ public class ServerWindow extends JFrame {
                     ResultSet rs = ps.executeQuery();
                     byte[] bytes = rs.getBytes("PICTURE");
                     String info = rs.getString("INFO");
-                    showEditInfo(bytes, info);
+                    String time = String.valueOf(rs.getInt("TIME"));
+                    String price = String.valueOf(rs.getDouble("PRICE"));
+                    showEditInfo(bytes, info, time, price);
                 } catch (SQLException e1) {
                     e1.printStackTrace();
                 }
@@ -252,8 +254,8 @@ public class ServerWindow extends JFrame {
         }
     }
 
-    void showEditInfo(byte[] bytes, String info) {
-        EditInfoWindow aWindow = new EditInfoWindow("Movie Information", bytes, info, this, selectedId);
+    void showEditInfo(byte[] bytes, String info, String time, String price) {
+        EditInfoWindow aWindow = new EditInfoWindow("Movie Information", bytes, info, time, price,this, selectedId);
         Toolkit theKit = aWindow.getToolkit();
         Dimension wndSize = theKit.getScreenSize();  // Get screen size
         aWindow.setBounds(wndSize.width / 4, wndSize.height / 4,   // Position
@@ -693,25 +695,31 @@ public class ServerWindow extends JFrame {
     }
 
 
-    void updateMovie(byte[] pic, String info, String id) {
+    void updateMovie(byte[] pic, String info, String id, String time, String price) {
         try {
             if (pic.length > 0) {
-                String sql = "UPDATE MOVIE SET PICTURE=?, INFO=? WHERE ID=?";
+                String sql = "UPDATE MOVIE SET PICTURE=?, INFO=?, TIME=?, PRICE=? WHERE ID=?";
                 PreparedStatement pstmt = c.prepareStatement(sql);
                 pstmt.setBytes(1, pic);
                 pstmt.setString(2, info);
-                pstmt.setString(3, id);
+                pstmt.setInt(3, Integer.parseInt(time));
+                pstmt.setDouble(4, Double.parseDouble(price));
+                pstmt.setString(5, id);
                 pstmt.executeUpdate();
             } else {
-                String sql = "UPDATE MOVIE SET INFO=? WHERE ID=?";
+                String sql = "UPDATE MOVIE SET INFO=?, TIME=?, PRICE=? WHERE ID=?";
                 PreparedStatement pstmt = c.prepareStatement(sql);
                 pstmt.setString(1, info);
-                pstmt.setString(2, id);
+                pstmt.setInt(2, Integer.parseInt(time));
+                pstmt.setDouble(3, Double.parseDouble(price));
+                pstmt.setString(4, id);
                 pstmt.executeUpdate();
             }
             updateTable();
         } catch (SQLException e) {
             e.printStackTrace();
+        } catch (Exception e){
+            JOptionPane.showMessageDialog(this, "Time should be an integer.\nPrice should be a double number.", "Error", JOptionPane.WARNING_MESSAGE);
         }
     }
 

@@ -16,19 +16,24 @@ public class EditInfoWindow extends JDialog implements ActionListener{
     JPanel panelUp;
     JPanel panelDown;
     JLabel l;
-    JTextArea personalInfo;
+    JTextField timeText;
+    JTextField priceText;
+    JTextArea Info;
     Boolean isPicture = false;
-    EditInfoWindow(String title, byte[] head, String info, ServerWindow serverWindow, String movieid){
+    EditInfoWindow(String title, byte[] head, String info, String time, String price, ServerWindow serverWindow, String movieid){
         this.serverWindow = serverWindow;
         this.movieid = movieid;
         panelUp = new JPanel(new BorderLayout());
-        panelDown = new JPanel(new BorderLayout());
+        panelDown = new JPanel(new GridLayout(7, 1));
         ImageIcon headImage = null;
         if(head != null) {
             headImage = new ImageIcon(head);
             headImage.setImage(headImage.getImage().getScaledInstance(80, 80, Image.SCALE_DEFAULT));
         }
-        personalInfo = new JTextArea(info);
+        Info = new JTextArea(info);
+        timeText = new JTextField(time);
+        priceText = new JTextField(price);
+
         Box up = Box.createHorizontalBox();
         jfc = new JFileChooser();
         path = new JTextField();
@@ -39,13 +44,19 @@ public class EditInfoWindow extends JDialog implements ActionListener{
 
         l = new JLabel(headImage);
         l.setHorizontalAlignment(JLabel.CENTER);
+
         panelUp.add(new JLabel("Head Image:"), BorderLayout.NORTH);
         panelUp.add(l, BorderLayout.CENTER);
         panelUp.add(up, BorderLayout.SOUTH);
 
-        panelDown.add(new JLabel("Personal Description:"), BorderLayout.NORTH);
-        panelDown.add(personalInfo, BorderLayout.CENTER);
-        panelDown.add(save, BorderLayout.SOUTH);
+        panelDown.add(new JLabel("时长(min):"));
+        panelDown.add(timeText);
+        panelDown.add(new JLabel("价格(元):"));
+        panelDown.add(priceText);
+        panelDown.add(new JLabel("简介:"));
+        panelDown.add(Info);
+        panelDown.add(save);
+
 
         Container content = getContentPane();      // Get content pane
         content.setLayout(new GridLayout(2,1));
@@ -69,9 +80,9 @@ public class EditInfoWindow extends JDialog implements ActionListener{
                 int size = fis.available();
                 byte[] data = new byte[size];
                 fis.read(data);
-                serverWindow.updateMovie(data, personalInfo.getText(), movieid);
+                serverWindow.updateMovie(data, Info.getText(), movieid, timeText.getText(), priceText.getText());
             }
-            else serverWindow.updateMovie(new byte[0], personalInfo.getText(), movieid);
+            else serverWindow.updateMovie(new byte[0], Info.getText(), movieid, timeText.getText(), priceText.getText());
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
         } catch (IOException e1) {
