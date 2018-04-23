@@ -1,4 +1,4 @@
-package server;
+package Server;
 
 
 import java.io.*;
@@ -532,32 +532,145 @@ public class ServerWindow extends JFrame {
                 while (true) {
                     buf = remoteIn.readUTF();
                     if (buf.charAt(0) == 'S') {
-                    	String sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                    	String user = buf.substring(1);
+                    	String sql = "SELECT * FROM RECORD WHERE OUTTIME = NULL AND USER = ? AND HALL = ?";
                     	PreparedStatement ps = c.prepareStatement(sql);
-                    	ps.setString(1, buf.substring(1));
+                    	ps.setString(1, user);
+                    	ps.setString(2, id);
                     	ResultSet rs = ps.executeQuery();
-                    	String s = rs.getString("BANKID");
-                    	if(rs.next() && (rs.getString("BANKID") != null)){
-                    		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
-                    		PreparedStatement ps1 = c.prepareStatement(sql);
-                    		ps1.setString(1, id);
-                    		ResultSet rs1 = ps1.executeQuery();
-                    		if (rs1.next()) {
-                    			DataOutputStream dataOut = null;
-                    			for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
-                    				ClientOut c = (ClientOut) e.nextElement();
-                    				if (c.id.equals(buf.substring(1))) {
-                    					dataOut = c.remoteOut;
-                    					break;
-                    				}
-                    			}
-                    			dataOut.writeUTF("S" + rs1.getString("SEAT"));
-                    			dataOut.flush();
-                    		}
+                    	if(rs.next()){
+                    		//String user = buf.substring(1, buf.indexOf(':'));
+                    		Timestamp ts2 = new Timestamp(System.currentTimeMillis());
+                    		String time = ts2.toString();
+                        	sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";               
+                        	ps = c.prepareStatement(sql);
+                        	ps.setString(1, user);
+                        	ps.setString(2, id);
+                        	rs = ps.executeQuery();
+                        	if(rs.next()){
+                        		int seat = rs.getInt("SEAT");
+                        		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setString(1, id);
+                        		rs = ps.executeQuery();
+                        		if(rs.next()){
+                                    String s = rs.getString("SEAT");
+                                    s = s.substring(0,seat) + "0" + s.substring(seat+1);
+                                    sql = "UPDATE HALL SET SEAT= ? WHERE ID = ?";
+                                    ps = c.prepareStatement(sql);
+                                    ps.setString(1, s);
+                                    ps.setString(2, id);
+                                    ps.executeUpdate();
+                                }
+                        	}
+                        	sql = "UPDATE RECORD SET OUTTIME = ? WHERE USER = ? AND HALL = ?";
+                        	ps = c.prepareStatement(sql);
+                        	ps.setString(1, time);
+                        	ps.setString(2, user);
+                        	ps.setString(3, id);
+                        	ps.executeQuery();
+                        	sql = "SELECT * FROM RECORD WHERE USER = ? AND HALL = ?";
+                        	ps = c.prepareStatement(sql);
+                        	ps.setString(1, user);
+                        	ps.setString(2, id);
+                        	rs = ps.executeQuery();
+                        	if(rs.next()){
+                        		String s1 = rs.getString("INTIME");
+                        		Timestamp ts1 = Timestamp.valueOf(s1);
+                        		//Timestamp ts2 = Timestamp.valueOf(s2);
+                        		sql = "SELECT * FROM TIMELIST WHERE TIME <= ? AND HALL = ? ORDER BY TIME DESC LIMIT 1";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setString(1, s1);
+                        		ps.setString(1, id);
+                        		rs = ps.executeQuery();
+                        		String mov = rs.getString("MOVIE");
+                        		String timestart1 = rs.getString("TIME");
+                        		Timestamp tms1 = Timestamp.valueOf(timestart1);
+                        		sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setString(1, mov);
+                        		rs = ps.executeQuery();
+                        		int time1 = rs.getInt("TIME");
+                        		double price1 = rs.getDouble("PRICE");
+                        		double timelength = 0;
+                        		double price = 0;
+                        		timelength = (tms1.getTime() + 60*1000*time1 - ts1.getTime())/(60*1000);
+                        		if(timelength >= 0) 
+                        			price = price1*timelength/(double)time1;
+                        		sql = "SELECT * FROM TIMELIST WHERE TIME >= ? AND TIME <= ? AND HALL = ? ORDER BY TIME";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setString(1, s1);
+                        		ps.setString(2, s2);
+                        		ps.setString(3, id);
+                        		rs = ps.executeQuery();                		
+                        		while(rs.next()){
+                        			mov = rs.getString("MOVIE");
+                        			timestart1 = rs.getString("TIME");
+                        			tms1 = Timestamp.valueOf(timestart1);
+                        			sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                        			ps = c.prepareStatement(sql);
+                        			ResultSet rs1 = ps.executeQuery();                   			
+                        			price1 = rs1.getDouble("PRICE");
+                        			price = price + price1;
+                        			time1 = rs1.getInt("TIME");                  			
+                        		}
+                        		timelength = tms1.getTime()+ 60*1000*time1 - ts2.getTime();
+                        		if(timelength > 0){
+                        			price = price - price1*timelength/(60*1000*time1);
+                        		}
+                        		sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setString(1, user);
+                        		rs = ps.executeQuery();
+                        		String s = rs.getString("BANKID");
+                        		sql = "UPDATE ACCOUNT SET MONEY = MONEY - ? WHERE BANKID = ?";
+                        		ps = c.prepareStatement(sql);
+                        		ps.setDouble(1, price);
+                        		ps.setString(2, s);
+                        		rs = ps.executeQuery();
+                        		if(rs.next()){
+                        			DataOutputStream dataOut = null;
+                            		for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
+                            			ClientOut c = (ClientOut) e.nextElement();
+                            			if (c.id.equals(user)) {
+                            				dataOut = c.remoteOut;
+                            				break;
+                            			}
+                            		}
+                            		dataOut.writeUTF("M" + s + ":" + price);
+                           			dataOut.flush();
+                        		}              			
+                       		}              	
                     	}
                     	else{
-                    		sendMessage(buf.substring(1), "N");                		
+                    		sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                        	ps = c.prepareStatement(sql);
+                        	ps.setString(1, user);
+                        	rs = ps.executeQuery();
+                        	String s = rs.getString("BANKID");
+                        	if(rs.next() && (rs.getString("BANKID") != null)){
+                        		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                        		PreparedStatement ps1 = c.prepareStatement(sql);
+                        		ps1.setString(1, id);
+                        		ResultSet rs1 = ps1.executeQuery();
+                        		if (rs1.next()) {
+                        			DataOutputStream dataOut = null;
+                        			for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
+                        				ClientOut c = (ClientOut) e.nextElement();
+                        				if (c.id.equals(buf.substring(1))) {
+                        					dataOut = c.remoteOut;
+                        					break;
+                        				}
+                        			}
+                        			dataOut.writeUTF("S" + rs1.getString("SEAT"));
+                        			dataOut.flush();
+                        		}
+                        	}
+                        	else{
+                        		sendMessage(buf.substring(1), "N");                		
+                        	}
                     	}
+                    	
                     } else if (buf.charAt(0) == 'C') {
                     	//DataOutputStream dataOut = null;
                     	//String user = buf.substring(1, buf.indexOf(':'));
@@ -659,7 +772,48 @@ public class ServerWindow extends JFrame {
                         ps.setTimestamp(3, ts);
                         ps.setInt(4,seat);
                         ps.executeUpdate();
-                    } else if (buf.charAt(0) == 'M') {
+                    } else if(buf.charAt(0) == 'H'){
+                    	String hall = buf.substring(1);
+                    	String sql = "SELECT * FROM HALL WHERE ID = ?";
+                    	PreparedStatement ps = c.prepareStatement(sql);
+                    	ps.setString(1, hall);
+                    	ResultSet rs = ps.executeQuery();
+                    	if(rs.next()){
+                    		sql = "SELECT * FROM TIMELIST WHERE HALL = ? ORDER BY TIME";
+                    		ps = c.prepareStatement(sql);
+                    		ps.setString(1, hall);
+                    		ResultSet rs1 = ps.executeQuery();
+                    		sendMessage(hall, "Y");
+                    		while(rs1.next()){
+                    			String mov = rs1.getString("MOVIE");
+                    			String time = rs1.getString("TIME");
+                    			sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setString(1, mov);
+                                ResultSet rs2 = ps.executeQuery();
+                                String out = "P";
+                                DataOutputStream dataOut = null;
+                                for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
+                                    ClientOut c = (ClientOut) e.nextElement();
+                                    if (c.id.equals(hall)) {
+                                        dataOut = c.remoteOut;
+                                        break;
+                                    }
+                                }
+                                byte[] pic = rs2.getBytes("PICTURE");
+                                int len = pic.length;
+                                dataOut.writeUTF(out);
+                                dataOut.writeInt(len);
+                                dataOut.write(pic);
+                                dataOut.writeUTF("N" + mov + ":" + time);
+                                dataOut.flush();
+                    		}
+                    	}
+                    	else
+                    		sendMessage(hall, "N");
+                    	
+                    } 
+                    /*else if (buf.charAt(0) == 'M') {
                     	String user = buf.substring(1, buf.indexOf(':'));
                     	String time = buf.substring(buf.indexOf(':') + 1);
                     	String sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";               
@@ -762,7 +916,7 @@ public class ServerWindow extends JFrame {
                        			dataOut.flush();
                     		}              			
                    		}              	
-                    }
+                    }*/
 //                    if (buf.charAt(0) == 'P') {
 //                        int size = remoteIn.readInt();
 //                        byte[] data = new byte[size];
