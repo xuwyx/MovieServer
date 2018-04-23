@@ -476,7 +476,7 @@ public class ServerWindow extends JFrame {
                             dataOut.writeUTF("I");
                             dataOut.flush();
                         } else {
-                            sql = "INSERT INTO USERS(ID, PASSWORD) VALUES (?, ?)";
+                            sql = "INSERT INTO USERS(ID, PASSWORD, BANKID) VALUES (?, ?, NULL)";
                             pstmt = c.prepareStatement(sql);
                             pstmt.setString(1, id);
                             pstmt.setString(2, ps);
@@ -514,6 +514,7 @@ public class ServerWindow extends JFrame {
                     dataOut = c.remoteOut;
                     try {
                         dataOut.writeUTF(msg);
+                        dataOut.flush();
                     } catch (IOException x) {
                         System.out.println(x.getMessage() + ": Failed to send message to client.");
                         clients.removeElement(c);
@@ -535,7 +536,8 @@ public class ServerWindow extends JFrame {
                     	PreparedStatement ps = c.prepareStatement(sql);
                     	ps.setString(1, buf.substring(1));
                     	ResultSet rs = ps.executeQuery();
-                    	if(rs.next()){
+                    	String s = rs.getString("BANKID");
+                    	if(rs.next() && (rs.getString("BANKID") != null)){
                     		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
                     		PreparedStatement ps1 = c.prepareStatement(sql);
                     		ps1.setString(1, id);
@@ -544,7 +546,7 @@ public class ServerWindow extends JFrame {
                     			DataOutputStream dataOut = null;
                     			for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
                     				ClientOut c = (ClientOut) e.nextElement();
-                    				if (c.id.equals(id)) {
+                    				if (c.id.equals(buf.substring(1))) {
                     					dataOut = c.remoteOut;
                     					break;
                     				}
@@ -554,18 +556,16 @@ public class ServerWindow extends JFrame {
                     		}
                     	}
                     	else{
-                    		DataOutputStream dataOut = null;
-                    		dataOut.writeUTF("N");
-                    		dataOut.flush();                		
+                    		sendMessage(buf.substring(1), "N");                		
                     	}
                     } else if (buf.charAt(0) == 'C') {
-                    	DataOutputStream dataOut = null;
-                    	String user = buf.substring(1, buf.indexOf(':'));
-                    	String id = buf.substring(buf.indexOf(':') + 1, buf.indexOf(':', buf.indexOf(':') + 1));
-                    	String ps = buf.substring(buf.indexOf(':', buf.indexOf(':') + 1) + 1);
+                    	//DataOutputStream dataOut = null;
+                    	//String user = buf.substring(1, buf.indexOf(':'));
+                    	String bankid = buf.substring(1, buf.indexOf(':'));
+                    	String ps = buf.substring(buf.indexOf(':') + 1);
                     	String sql = "SELECT * FROM ACCOUNT WHERE BANKID = ?";
                         PreparedStatement pstmt = c.prepareStatement(sql);
-                        pstmt.setString(1, id);
+                        pstmt.setString(1, bankid);
                         
                         ResultSet rs = pstmt.executeQuery();
                         if (rs.next()) {
@@ -575,26 +575,22 @@ public class ServerWindow extends JFrame {
                                 pstmt.setString(1, id);
                                 rs = pstmt.executeQuery();
                                 if (rs.next()) {
-                                    dataOut.writeUTF("0");
-                                    dataOut.flush();
+                                    sendMessage(id, "0");
                                 }
                                 else {
-                                	sql = "UPDATE USERS SET BANKID = '" + id + "' WHERE id = ?";
+                                	sql = "UPDATE USERS SET BANKID = '" + bankid + "' WHERE id = ?";
                                 	pstmt = c.prepareStatement(sql);
-                                	pstmt.setString(1, user);
+                                	pstmt.setString(1, id);
                                 	rs = pstmt.executeQuery();
-                                	dataOut.writeUTF("1");
-                                	dataOut.flush();
+                                	sendMessage(id, "1");
                                 }
                             } else {
                                 //infoTxt.append(id + " connected to server. Wrong password.\n");
-                                dataOut.writeUTF("0");
-                                dataOut.flush();
+                                sendMessage(id, "0");
                             }
                         } else {
                             //infoTxt.append(id + " connected to server. But not found in database.\n");
-                            dataOut.writeUTF("0");
-                            dataOut.flush();
+                            sendMessage(id, "0");
                         }
                     } else if (buf.charAt(0) == 'L') {
                         String sql = "SELECT ID FROM MOVIE";
@@ -703,8 +699,46 @@ public class ServerWindow extends JFrame {
                     		String s2 = time;
                     		Timestamp ts1 = Timestamp.valueOf(s1);
                     		Timestamp ts2 = Timestamp.valueOf(s2);
-                    		double timelength = (ts2.getTime() - ts1.getTime())/(60*1000);
-                    		double price = timelength * 0.25;
+                    		sql = "SELECT * FROM TIMELIST WHERE TIME <= ? AND HALL = ? ORDER BY TIME DESC LIMIT 1";
+                    		ps = c.prepareStatement(sql);
+                    		ps.setString(1, s1);
+                    		ps.setString(1, id);
+                    		rs = ps.executeQuery();
+                    		String mov = rs.getString("MOVIE");
+                    		String timestart1 = rs.getString("TIME");
+                    		Timestamp tms1 = Timestamp.valueOf(timestart1);
+                    		sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                    		ps = c.prepareStatement(sql);
+                    		ps.setString(1, mov);
+                    		rs = ps.executeQuery();
+                    		int time1 = rs.getInt("TIME");
+                    		double price1 = rs.getDouble("PRICE");
+                    		double timelength = 0;
+                    		double price = 0;
+                    		timelength = (tms1.getTime() + 60*1000*time1 - ts1.getTime())/(60*1000);
+                    		if(timelength >= 0) 
+                    			price = price1*timelength/(double)time1;
+                    		sql = "SELECT * FROM TIMELIST WHERE TIME >= ? AND TIME <= ? AND HALL = ? ORDER BY TIME";
+                    		ps = c.prepareStatement(sql);
+                    		ps.setString(1, s1);
+                    		ps.setString(2, s2);
+                    		ps.setString(3, id);
+                    		rs = ps.executeQuery();                		
+                    		while(rs.next()){
+                    			mov = rs.getString("MOVIE");
+                    			timestart1 = rs.getString("TIME");
+                    			tms1 = Timestamp.valueOf(timestart1);
+                    			sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                    			ps = c.prepareStatement(sql);
+                    			ResultSet rs1 = ps.executeQuery();                   			
+                    			price1 = rs1.getDouble("PRICE");
+                    			price = price + price1;
+                    			time1 = rs1.getInt("TIME");                  			
+                    		}
+                    		timelength = tms1.getTime()+ 60*1000*time1 - ts2.getTime();
+                    		if(timelength > 0){
+                    			price = price - price1*timelength/(60*1000*time1);
+                    		}
                     		sql = "SELECT BANKID FROM USERS WHERE ID = ?";
                     		ps = c.prepareStatement(sql);
                     		ps.setString(1, user);
