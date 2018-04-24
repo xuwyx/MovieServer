@@ -424,9 +424,11 @@ public class ServerWindow extends JFrame {
                 while (true) {
                     int flag = 0;
                     socket = server.accept();
+                    System.out.println("connected");
                     DataInputStream remoteIn = new DataInputStream(socket.getInputStream());
                     DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
                     String buf = remoteIn.readUTF();
+                    System.out.println(buf);
                     String id = buf.substring(1, buf.indexOf(':'));
                     String ps = buf.substring(buf.indexOf(':') + 1);
                     if (buf.charAt(0) == 'L') {
@@ -531,6 +533,7 @@ public class ServerWindow extends JFrame {
             try {
                 while (true) {
                     buf = remoteIn.readUTF();
+                    System.out.println(buf);
                     if (buf.charAt(0) == 'S') {
                     	String sql = "SELECT BANKID FROM USERS WHERE ID = ?";
                     	PreparedStatement ps = c.prepareStatement(sql);
@@ -614,11 +617,14 @@ public class ServerWindow extends JFrame {
                     } else if (buf.charAt(0) == 'I') {
                         String sql = "SELECT * FROM MOVIE WHERE ID = ?";
                         PreparedStatement ps = c.prepareStatement(sql);
+                        ps.setString(1, buf.substring(1));
                         ResultSet rs = ps.executeQuery();
-                        String out = "P";
+//                        String out = "A";
                         DataOutputStream dataOut = null;
+//                        System.out.println("client: "+id);
                         for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
                             ClientOut c = (ClientOut) e.nextElement();
+//                            System.out.println(c.id);
                             if (c.id.equals(id)) {
                                 dataOut = c.remoteOut;
                                 break;
@@ -627,13 +633,13 @@ public class ServerWindow extends JFrame {
                         if (rs.next()) {
                             byte[] pic = rs.getBytes("PICTURE");
                             int len = pic.length;
-                            dataOut.writeUTF(out);
+//                            dataOut.writeUTF(out);
                             dataOut.writeInt(len);
                             dataOut.write(pic);
-                            dataOut.writeUTF("I" + rs.getString("INFO") + "T:");
-                            dataOut.writeInt(rs.getInt("TIME"));
-                            dataOut.writeUTF(":P");
-                            dataOut.writeDouble(rs.getDouble("PRICE"));
+                            dataOut.writeUTF( rs.getString("INFO") );
+                            dataOut.writeUTF(String.valueOf(rs.getInt("TIME")));
+//                            dataOut.writeUTF(":P");
+                            dataOut.writeUTF(String.valueOf(rs.getDouble("PRICE")));
                             dataOut.flush();
                         }
                     } else if (buf.charAt(0) == 'P') {
