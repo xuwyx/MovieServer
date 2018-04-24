@@ -25,3 +25,8 @@ src/client/ChatWindow.java
 .idea/dataSources/939a7075-0284-4efa-a809-5e2847528c76/_metadata_/metadata_i
 .idea/dataSources/939a7075-0284-4efa-a809-5e2847528c76/_metadata_/metadata_i.len
 .idea/misc.xml
+.idea/*
+src/client/*
+*.iml
+*.db
+out/*
