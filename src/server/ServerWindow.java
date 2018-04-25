@@ -217,7 +217,7 @@ public class ServerWindow extends JFrame {
 
     void deleteTimeList(String hallID, String movieID, String time){
         Timestamp ts = Timestamp.valueOf(time);
-        String sql = "DELETE FROM MOVIE WHERE ID=? AND HALL=? AND TIME=?";
+        String sql = "DELETE FROM TIMELIST WHERE HALL=? AND MOVIE=? AND TIME=?";
         try {
             PreparedStatement pstmt = c.prepareStatement(sql);
             pstmt.setString(1, hallID);
