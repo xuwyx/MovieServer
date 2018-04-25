@@ -419,8 +419,9 @@ public class ServerWindow extends JFrame {
         }
 
         public synchronized void run() {
-            try {
-                while (true) {
+            while (true) {
+                try {
+
                     int flag = 0;
                     socket = server.accept();
                     System.out.println("connected");
@@ -523,11 +524,11 @@ public class ServerWindow extends JFrame {
                         }
 
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -551,6 +552,7 @@ public class ServerWindow extends JFrame {
                     try {
                         dataOut.writeUTF(msg);
                         dataOut.flush();
+                        infoTxt.append("Send message: "+msg+"\n");
                     } catch (IOException x) {
                         System.out.println(x.getMessage() + ": Failed to send message to client.");
                         clients.removeElement(c);
@@ -570,37 +572,32 @@ public class ServerWindow extends JFrame {
                     System.out.println(buf);
                     if (buf.charAt(0) == 'S') {
                         String user = buf.substring(1);
-                        String sql = "SELECT * FROM RECORD WHERE OUTTIME = NULL AND USER = ? AND HALL = ?";
+                        String sql = "SELECT * FROM RECORD WHERE OUTTIME IS NULL AND USER = ? AND HALL = ?";
                         PreparedStatement ps = c.prepareStatement(sql);
                         ps.setString(1, user);
                         ps.setString(2, id);
                         ResultSet rs = ps.executeQuery();
                         Timestamp ts1, ts2;
+                        String s = "";
                         if (rs.next()) {
                             ts2 = new Timestamp(System.currentTimeMillis());
                             ts1 = rs.getTimestamp("INTIME");
-//                    		String time = ts2.toString();
-                            sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";
+                            int seat = rs.getInt("SEAT");
+                            sql = "SELECT SEAT FROM HALL WHERE ID = ?";
                             ps = c.prepareStatement(sql);
-                            ps.setString(1, user);
-                            ps.setString(2, id);
+                            ps.setString(1, id);
                             rs = ps.executeQuery();
                             if (rs.next()) {
-                                int seat = rs.getInt("SEAT");
-                                sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                                s = rs.getString("SEAT");
+                                s = s.substring(0, seat) + "0" + s.substring(seat + 1);
+                                sql = "UPDATE HALL SET SEAT= ? WHERE ID = ?";
                                 ps = c.prepareStatement(sql);
-                                ps.setString(1, id);
-                                rs = ps.executeQuery();
-                                if (rs.next()) {
-                                    String s = rs.getString("SEAT");
-                                    s = s.substring(0, seat) + "0" + s.substring(seat + 1);
-                                    sql = "UPDATE HALL SET SEAT= ? WHERE ID = ?";
-                                    ps = c.prepareStatement(sql);
-                                    ps.setString(1, s);
-                                    ps.setString(2, id);
-                                    ps.executeUpdate();
-                                }
+                                ps.setString(1, s);
+                                ps.setString(2, id);
+                                ps.executeUpdate();
                             }
+
+//                            }
                             sql = "UPDATE RECORD SET OUTTIME = ? WHERE USER = ? AND HALL = ? AND INTIME = ?";
                             ps = c.prepareStatement(sql);
                             ps.setTimestamp(1, ts2);
@@ -615,6 +612,7 @@ public class ServerWindow extends JFrame {
                             ps.setString(2, id);
                             rs = ps.executeQuery();
                             if (rs.next()) {
+
                                 String mov = rs.getString("MOVIE");
                                 Timestamp tms1 = rs.getTimestamp("TIME");
                                 sql = "SELECT * FROM MOVIE WHERE ID = ?";
@@ -633,6 +631,7 @@ public class ServerWindow extends JFrame {
                                 timelength = (tms1.getTime() + 60 * 1000 * time1 - ts1.getTime()) / (60 * 1000);
                                 if (timelength >= 0)
                                     price = price1 * timelength / (double) time1;
+                                System.out.println("price1:"+price);
                                 sql = "SELECT * FROM TIMELIST WHERE TIME >= ? AND TIME <= ? AND HALL = ? ORDER BY TIME";
                                 ps = c.prepareStatement(sql);
                                 ps.setTimestamp(1, ts1);
@@ -640,6 +639,7 @@ public class ServerWindow extends JFrame {
                                 ps.setString(3, id);
                                 rs = ps.executeQuery();
                                 while (rs.next()) {
+                                    System.out.println("1");
                                     mov = rs.getString("MOVIE");
                                     tms1 = rs.getTimestamp("TIME");
                                     sql = "SELECT * FROM MOVIE WHERE ID = ?";
@@ -649,18 +649,23 @@ public class ServerWindow extends JFrame {
                                     if (rs.next()) {
                                         price1 = rs1.getDouble("PRICE");
                                         price = price + price1;
+                                        System.out.println("price2:"+price);
+
                                         time1 = rs1.getInt("TIME");
                                     }
                                 }
+
                                 timelength = tms1.getTime() + 60 * 1000 * time1 - ts2.getTime();
                                 if (timelength > 0) {
                                     price = price - price1 * timelength / (60 * 1000 * time1);
+                                    System.out.println("price3:"+price);
                                 }
+                                if(price < 0) price = 0;
+
                                 sql = "SELECT BANKID FROM USERS WHERE ID = ?";
                                 ps = c.prepareStatement(sql);
                                 ps.setString(1, user);
                                 rs = ps.executeQuery();
-                                String s = "";
                                 if (rs.next()) {
                                     s = rs.getString("BANKID");
                                 }
@@ -668,26 +673,26 @@ public class ServerWindow extends JFrame {
                                 ps = c.prepareStatement(sql);
                                 ps.setDouble(1, price);
                                 ps.setString(2, s);
+                                ps.executeUpdate();
+                                String p = String.valueOf(price);
+                                p = p.substring(0, p.indexOf('.')+3);
+                                sendMessage(user, "M" + s + ":" + p);
+                            }
+                            else {
+                                sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setString(1, user);
                                 rs = ps.executeQuery();
                                 if (rs.next()) {
-                                    DataOutputStream dataOut = null;
-                                    for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
-                                        ClientOut c = (ClientOut) e.nextElement();
-                                        if (c.id.equals(user)) {
-                                            dataOut = c.remoteOut;
-                                            break;
-                                        }
-                                    }
-                                    dataOut.writeUTF("M" + s + ":" + price);
-                                    dataOut.flush();
+                                    s = rs.getString("BANKID");
                                 }
+                                sendMessage(user, "M" + s + ":0");
                             }
                         } else {
                             sql = "SELECT BANKID FROM USERS WHERE ID = ?";
                             ps = c.prepareStatement(sql);
                             ps.setString(1, user);
                             rs = ps.executeQuery();
-//                        	String s = rs.getString("BANKID");
                             if (rs.next() && (rs.getString("BANKID") != null)) {
                                 sql = "SELECT SEAT FROM HALL WHERE ID = ?";
                                 PreparedStatement ps1 = c.prepareStatement(sql);
@@ -813,8 +818,9 @@ public class ServerWindow extends JFrame {
                         ps.setTimestamp(3, ts);
                         ps.setInt(4, seat);
                         ps.executeUpdate();
-                    } else if (buf.charAt(0) == 'Q') {
-                        sendMessage(id, "000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111");
+                        sendMessage(id, "Z");
+                    } else if (buf.charAt(0) == 'Q' || buf.charAt(0) == 'Z') {
+//                        sendMessage(id, "000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111");
                     }
                     /*else if (buf.charAt(0) == 'M') {
                         String user = buf.substring(1, buf.indexOf(':'));

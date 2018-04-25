@@ -24,12 +24,13 @@ public class EditInfoWindow extends JDialog implements ActionListener{
         this.serverWindow = serverWindow;
         this.movieid = movieid;
         panelUp = new JPanel(new BorderLayout());
-        panelDown = new JPanel(new GridLayout(7, 1));
+        panelDown = new JPanel(new GridLayout(5, 1));
         ImageIcon headImage = null;
         if(head != null) {
             headImage = new ImageIcon(head);
-            headImage.setImage(headImage.getImage().getScaledInstance(80, 80, Image.SCALE_DEFAULT));
+            headImage.setImage(headImage.getImage().getScaledInstance(100, 150, Image.SCALE_DEFAULT));
         }
+        JScrollPane jsp;
         Info = new JTextArea(info);
         timeText = new JTextField(time);
         priceText = new JTextField(price);
@@ -54,14 +55,18 @@ public class EditInfoWindow extends JDialog implements ActionListener{
         panelDown.add(new JLabel("价格(元):"));
         panelDown.add(priceText);
         panelDown.add(new JLabel("简介:"));
-        panelDown.add(Info);
-        panelDown.add(save);
+        JPanel panelDown2 = new JPanel(new BorderLayout());
+        Info.setLineWrap(true);
+        jsp = new JScrollPane(Info);
+        panelDown2.add(jsp, BorderLayout.CENTER);
+        panelDown2.add(save, BorderLayout.SOUTH);
 
 
         Container content = getContentPane();      // Get content pane
-        content.setLayout(new GridLayout(2,1));
+        content.setLayout(new GridLayout(3,1));
         content.add(panelUp);
         content.add(panelDown);
+        content.add(panelDown2);
 
         upload.addActionListener(this);
         save.addActionListener(new ActionListener() {
@@ -102,7 +107,7 @@ public class EditInfoWindow extends JDialog implements ActionListener{
             }
             panelUp.remove(l);
             ImageIcon headImage = new ImageIcon(fname);
-            headImage.setImage(headImage.getImage().getScaledInstance(80, 80, Image.SCALE_DEFAULT));
+            headImage.setImage(headImage.getImage().getScaledInstance(100, 150, Image.SCALE_DEFAULT));
             l = new JLabel(headImage);
             l.setHorizontalAlignment(JLabel.CENTER);
             panelUp.add(l, BorderLayout.CENTER);
