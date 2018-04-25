@@ -205,7 +205,7 @@ public class ServerWindow extends JFrame {
         new Listening(this.port).start();
     }
 
-    void showEditTimeList(String hallID){
+    void showEditTimeList(String hallID) {
         EditTimeList aWindow = new EditTimeList(hallID, this);
         Toolkit theKit = aWindow.getToolkit();
         Dimension wndSize = theKit.getScreenSize();  // Get screen size
@@ -215,7 +215,7 @@ public class ServerWindow extends JFrame {
         aWindow.setVisible(true);
     }
 
-    void deleteTimeList(String hallID, String movieID, String time){
+    void deleteTimeList(String hallID, String movieID, String time) {
         Timestamp ts = Timestamp.valueOf(time);
         String sql = "DELETE FROM TIMELIST WHERE HALL=? AND MOVIE=? AND TIME=?";
         try {
@@ -231,12 +231,12 @@ public class ServerWindow extends JFrame {
     }
 
     void addTimeList(String hallID, String movieID, String time) {
-        try{
+        try {
             String sql = "SELECT * FROM MOVIE WHERE ID=?";
             PreparedStatement pstmt = c.prepareStatement(sql);
             pstmt.setString(1, movieID);
             ResultSet rs = pstmt.executeQuery();
-            if(!rs.next()){
+            if (!rs.next()) {
                 JOptionPane.showMessageDialog(null, "Movie not exsist.", "Error", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -248,14 +248,13 @@ public class ServerWindow extends JFrame {
             pstmt.setTimestamp(3, ts);
             pstmt.executeUpdate();
             updateTimeListTable(hallID);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "TIME format: 2018-4-1 23:22:22", "Error", JOptionPane.WARNING_MESSAGE);
         }
     }
 
     void showEditInfo(byte[] bytes, String info, String time, String price) {
-        EditInfoWindow aWindow = new EditInfoWindow("Movie Information", bytes, info, time, price,this, selectedId);
+        EditInfoWindow aWindow = new EditInfoWindow("Movie Information", bytes, info, time, price, this, selectedId);
         Toolkit theKit = aWindow.getToolkit();
         Dimension wndSize = theKit.getScreenSize();  // Get screen size
         aWindow.setBounds(wndSize.width / 4, wndSize.height / 4,   // Position
@@ -377,17 +376,17 @@ public class ServerWindow extends JFrame {
                 String sql = "CREATE TABLE RECORD (USER VARCHAR KEY NOT NULL, HALL VARCHAR KEY NOT NULL, INTIME TIMESTAMP NOT NULL, OUTTIME TIMESTAMP, SEAT INT NOT NULL)";
                 stmt.executeUpdate(sql);
             }
-            
+
             rs = meta.getTables(null, null, "Account", null);
             if (!rs.next()) {
-            	String sql = "CREATE TABLE ACCOUNT (BANKID VARCHAR KEY NOT NULL, PASSWORD VARCHAR NOT NULL, MONEY DOUBLE)";
-            	stmt.executeUpdate(sql);
-            	sql = "INSERT INTO ACCOUNT VALUES(111,1111,11111)";
-            	stmt.executeUpdate(sql);
-            	sql = "INSERT INTO ACCOUNT VALUES(222,2222,22222)";
-            	stmt.executeUpdate(sql);
-            	sql = "INSERT INTO ACCOUNT VALUES(333,3333,33333)";
-            	stmt.executeUpdate(sql);
+                String sql = "CREATE TABLE ACCOUNT (BANKID VARCHAR KEY NOT NULL, PASSWORD VARCHAR NOT NULL, MONEY DOUBLE)";
+                stmt.executeUpdate(sql);
+                sql = "INSERT INTO ACCOUNT VALUES(111,1111,11111)";
+                stmt.executeUpdate(sql);
+                sql = "INSERT INTO ACCOUNT VALUES(222,2222,22222)";
+                stmt.executeUpdate(sql);
+                sql = "INSERT INTO ACCOUNT VALUES(333,3333,33333)";
+                stmt.executeUpdate(sql);
             }
         } catch (Exception e) {
             System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -488,12 +487,12 @@ public class ServerWindow extends JFrame {
                             dataOut.flush();
                             updateTable();
                         }
-                    } else if(buf.charAt(0) == 'H'){
+                    } else if (buf.charAt(0) == 'H') {
                         String hall = buf.substring(1);
                         String sql = "SELECT * FROM HALL WHERE ID = 1";
                         PreparedStatement pstmt = c.prepareStatement(sql);
                         ResultSet rs = pstmt.executeQuery();
-                        if(rs.next()) {
+                        if (rs.next()) {
                             sql = "SELECT * FROM TIMELIST WHERE HALL = '1' ORDER BY TIME";
                             pstmt = c.prepareStatement(sql);
                             ResultSet rs1 = pstmt.executeQuery();
@@ -506,7 +505,7 @@ public class ServerWindow extends JFrame {
                                 pstmt.setString(1, mov);
                                 ResultSet rs2 = pstmt.executeQuery();
                                 int time2 = 0;
-                                if(rs2.next()){
+                                if (rs2.next()) {
                                     time2 = rs2.getInt("TIME");
                                 }
                                 byte[] pic = rs2.getBytes("PICTURE");
@@ -515,7 +514,7 @@ public class ServerWindow extends JFrame {
                                 dataOut.writeInt(len);
                                 dataOut.write(pic);
                                 dataOut.writeUTF(mov);
-                                dataOut.writeUTF(time1.substring(time1.indexOf(" ")+1));
+                                dataOut.writeUTF(time1.substring(time1.indexOf(" ") + 1));
                                 dataOut.writeInt(time2);
                                 dataOut.flush();
                             }
@@ -570,158 +569,154 @@ public class ServerWindow extends JFrame {
                     buf = remoteIn.readUTF();
                     System.out.println(buf);
                     if (buf.charAt(0) == 'S') {
-                    	String user = buf.substring(1);
-                    	String sql = "SELECT * FROM RECORD WHERE OUTTIME = NULL AND USER = ? AND HALL = ?";
-                    	PreparedStatement ps = c.prepareStatement(sql);
-                    	ps.setString(1, user);
-                    	ps.setString(2, id);
-                    	ResultSet rs = ps.executeQuery();
-                    	if(rs.next()){
-                    		//String user = buf.substring(1, buf.indexOf(':'));
-                    		Timestamp ts2 = new Timestamp(System.currentTimeMillis());
-                    		String time = ts2.toString();
-                        	sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";
-                        	ps = c.prepareStatement(sql);
-                        	ps.setString(1, user);
-                        	ps.setString(2, id);
-                        	rs = ps.executeQuery();
-                        	if(rs.next()){
-                        		int seat = rs.getInt("SEAT");
-                        		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setString(1, id);
-                        		rs = ps.executeQuery();
-                        		if(rs.next()){
+                        String user = buf.substring(1);
+                        String sql = "SELECT * FROM RECORD WHERE OUTTIME = NULL AND USER = ? AND HALL = ?";
+                        PreparedStatement ps = c.prepareStatement(sql);
+                        ps.setString(1, user);
+                        ps.setString(2, id);
+                        ResultSet rs = ps.executeQuery();
+                        Timestamp ts1, ts2;
+                        if (rs.next()) {
+                            ts2 = new Timestamp(System.currentTimeMillis());
+                            ts1 = rs.getTimestamp("INTIME");
+//                    		String time = ts2.toString();
+                            sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";
+                            ps = c.prepareStatement(sql);
+                            ps.setString(1, user);
+                            ps.setString(2, id);
+                            rs = ps.executeQuery();
+                            if (rs.next()) {
+                                int seat = rs.getInt("SEAT");
+                                sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setString(1, id);
+                                rs = ps.executeQuery();
+                                if (rs.next()) {
                                     String s = rs.getString("SEAT");
-                                    s = s.substring(0,seat) + "0" + s.substring(seat+1);
+                                    s = s.substring(0, seat) + "0" + s.substring(seat + 1);
                                     sql = "UPDATE HALL SET SEAT= ? WHERE ID = ?";
                                     ps = c.prepareStatement(sql);
                                     ps.setString(1, s);
                                     ps.setString(2, id);
                                     ps.executeUpdate();
                                 }
-                        	}
-                        	sql = "UPDATE RECORD SET OUTTIME = ? WHERE USER = ? AND HALL = ?";
-                        	ps = c.prepareStatement(sql);
-                        	ps.setString(1, time);
-                        	ps.setString(2, user);
-                        	ps.setString(3, id);
-                        	ps.executeUpdate();
-                        	sql = "SELECT * FROM RECORD WHERE USER = ? AND HALL = ?";
-                        	ps = c.prepareStatement(sql);
-                        	ps.setString(1, user);
-                        	ps.setString(2, id);
-                        	rs = ps.executeQuery();
-                        	if(rs.next()){
-                                String s1 = rs.getString("INTIME");
-                                String s2 = rs.getString("OUTTIME");
-                        		Timestamp ts1 = Timestamp.valueOf(s1);
-//                        		Timestamp ts2 = Timestamp.valueOf(s2);
-                        		sql = "SELECT * FROM TIMELIST WHERE TIME <= ? AND HALL = ? ORDER BY TIME DESC LIMIT 1";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setString(1, s1);
-                        		ps.setString(1, id);
-                        		rs = ps.executeQuery();
-                        		String mov = rs.getString("MOVIE");
-                        		String timestart1 = rs.getString("TIME");
-                        		Timestamp tms1 = Timestamp.valueOf(timestart1);
-                        		sql = "SELECT * FROM MOVIE WHERE ID = ?";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setString(1, mov);
-                        		rs = ps.executeQuery();
+                            }
+                            sql = "UPDATE RECORD SET OUTTIME = ? WHERE USER = ? AND HALL = ? AND INTIME = ?";
+                            ps = c.prepareStatement(sql);
+                            ps.setTimestamp(1, ts2);
+                            ps.setString(2, user);
+                            ps.setString(3, id);
+                            ps.setTimestamp(4, ts1);
+                            ps.executeUpdate();
+
+                            sql = "SELECT * FROM TIMELIST WHERE TIME <= ? AND HALL = ? ORDER BY TIME DESC LIMIT 1";
+                            ps = c.prepareStatement(sql);
+                            ps.setTimestamp(1, ts1);
+                            ps.setString(2, id);
+                            rs = ps.executeQuery();
+                            if (rs.next()) {
+                                String mov = rs.getString("MOVIE");
+                                Timestamp tms1 = rs.getTimestamp("TIME");
+                                sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setString(1, mov);
+                                rs = ps.executeQuery();
                                 int time1 = 0;
                                 double price1 = 0;
-                        		if(rs.next()){
-                        		    time1 = rs.getInt("TIME");
+                                if (rs.next()) {
+                                    time1 = rs.getInt("TIME");
                                     price1 = rs.getDouble("PRICE");
                                 }
 
-                        		double timelength = 0;
-                        		double price = 0;
-                        		timelength = (tms1.getTime() + 60*1000*time1 - ts1.getTime())/(60*1000);
-                        		if(timelength >= 0) 
-                        			price = price1*timelength/(double)time1;
-                        		sql = "SELECT * FROM TIMELIST WHERE TIME >= ? AND TIME <= ? AND HALL = ? ORDER BY TIME";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setString(1, s1);
-                        		ps.setString(2, time);
-                        		ps.setString(3, id);
-                        		rs = ps.executeQuery();                		
-                        		while(rs.next()){
-                        			mov = rs.getString("MOVIE");
-                        			timestart1 = rs.getString("TIME");
-                        			tms1 = Timestamp.valueOf(timestart1);
-                        			sql = "SELECT * FROM MOVIE WHERE ID = ?";
-                        			ps = c.prepareStatement(sql);
-                        			ResultSet rs1 = ps.executeQuery();                   			
-                        			price1 = rs1.getDouble("PRICE");
-                        			price = price + price1;
-                        			time1 = rs1.getInt("TIME");                  			
-                        		}
-                        		timelength = tms1.getTime()+ 60*1000*time1 - ts2.getTime();
-                        		if(timelength > 0){
-                        			price = price - price1*timelength/(60*1000*time1);
-                        		}
-                        		sql = "SELECT BANKID FROM USERS WHERE ID = ?";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setString(1, user);
-                        		rs = ps.executeQuery();
-                        		String s = rs.getString("BANKID");
-                        		sql = "UPDATE ACCOUNT SET MONEY = MONEY - ? WHERE BANKID = ?";
-                        		ps = c.prepareStatement(sql);
-                        		ps.setDouble(1, price);
-                        		ps.setString(2, s);
-                        		rs = ps.executeQuery();
-                        		if(rs.next()){
-                        			DataOutputStream dataOut = null;
-                            		for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
-                            			ClientOut c = (ClientOut) e.nextElement();
-                            			if (c.id.equals(user)) {
-                            				dataOut = c.remoteOut;
-                            				break;
-                            			}
-                            		}
-                            		dataOut.writeUTF("M" + s + ":" + price);
-                           			dataOut.flush();
-                        		}              			
-                       		}              	
-                    	}
-                    	else{
-                    		sql = "SELECT BANKID FROM USERS WHERE ID = ?";
-                        	ps = c.prepareStatement(sql);
-                        	ps.setString(1, user);
-                        	rs = ps.executeQuery();
-                        	String s = rs.getString("BANKID");
-                        	if(rs.next() && (rs.getString("BANKID") != null)){
-                        		sql = "SELECT SEAT FROM HALL WHERE ID = ?";
-                        		PreparedStatement ps1 = c.prepareStatement(sql);
-                        		ps1.setString(1, id);
-                        		ResultSet rs1 = ps1.executeQuery();
-                        		if (rs1.next()) {
-                        			DataOutputStream dataOut = null;
-                        			for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
-                        				ClientOut c = (ClientOut) e.nextElement();
-                        				if (c.id.equals(buf.substring(1))) {
-                        					dataOut = c.remoteOut;
-                        					break;
-                        				}
-                        			}
-                        			dataOut.writeUTF(rs1.getString("SEAT"));
-                        			dataOut.flush();
-                        		}
-                        	}
-                        	else{
-                        		sendMessage(buf.substring(1), "N");                		
-                        	}
-                    	}
-                    	
+                                double timelength = 0;
+                                double price = 0;
+                                timelength = (tms1.getTime() + 60 * 1000 * time1 - ts1.getTime()) / (60 * 1000);
+                                if (timelength >= 0)
+                                    price = price1 * timelength / (double) time1;
+                                sql = "SELECT * FROM TIMELIST WHERE TIME >= ? AND TIME <= ? AND HALL = ? ORDER BY TIME";
+                                ps = c.prepareStatement(sql);
+                                ps.setTimestamp(1, ts1);
+                                ps.setTimestamp(2, ts2);
+                                ps.setString(3, id);
+                                rs = ps.executeQuery();
+                                while (rs.next()) {
+                                    mov = rs.getString("MOVIE");
+                                    tms1 = rs.getTimestamp("TIME");
+                                    sql = "SELECT * FROM MOVIE WHERE ID = ?";
+                                    ps = c.prepareStatement(sql);
+                                    ps.setString(1, mov);
+                                    ResultSet rs1 = ps.executeQuery();
+                                    if (rs.next()) {
+                                        price1 = rs1.getDouble("PRICE");
+                                        price = price + price1;
+                                        time1 = rs1.getInt("TIME");
+                                    }
+                                }
+                                timelength = tms1.getTime() + 60 * 1000 * time1 - ts2.getTime();
+                                if (timelength > 0) {
+                                    price = price - price1 * timelength / (60 * 1000 * time1);
+                                }
+                                sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setString(1, user);
+                                rs = ps.executeQuery();
+                                String s = "";
+                                if (rs.next()) {
+                                    s = rs.getString("BANKID");
+                                }
+                                sql = "UPDATE ACCOUNT SET MONEY = MONEY - ? WHERE BANKID = ?";
+                                ps = c.prepareStatement(sql);
+                                ps.setDouble(1, price);
+                                ps.setString(2, s);
+                                rs = ps.executeQuery();
+                                if (rs.next()) {
+                                    DataOutputStream dataOut = null;
+                                    for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
+                                        ClientOut c = (ClientOut) e.nextElement();
+                                        if (c.id.equals(user)) {
+                                            dataOut = c.remoteOut;
+                                            break;
+                                        }
+                                    }
+                                    dataOut.writeUTF("M" + s + ":" + price);
+                                    dataOut.flush();
+                                }
+                            }
+                        } else {
+                            sql = "SELECT BANKID FROM USERS WHERE ID = ?";
+                            ps = c.prepareStatement(sql);
+                            ps.setString(1, user);
+                            rs = ps.executeQuery();
+//                        	String s = rs.getString("BANKID");
+                            if (rs.next() && (rs.getString("BANKID") != null)) {
+                                sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                                PreparedStatement ps1 = c.prepareStatement(sql);
+                                ps1.setString(1, id);
+                                ResultSet rs1 = ps1.executeQuery();
+                                if (rs1.next()) {
+                                    DataOutputStream dataOut = null;
+                                    for (Enumeration e = clients.elements(); e.hasMoreElements(); ) {
+                                        ClientOut c = (ClientOut) e.nextElement();
+                                        if (c.id.equals(buf.substring(1))) {
+                                            dataOut = c.remoteOut;
+                                            break;
+                                        }
+                                    }
+                                    dataOut.writeUTF(rs1.getString("SEAT"));
+                                    dataOut.flush();
+                                }
+                            } else {
+                                sendMessage(buf.substring(1), "N");
+                            }
+                        }
+
                     } else if (buf.charAt(0) == 'C') {
-                    	String bankid = buf.substring(1, buf.indexOf(':'));
-                    	String ps = buf.substring(buf.indexOf(':') + 1);
-                    	String sql = "SELECT * FROM ACCOUNT WHERE BANKID = ?";
+                        String bankid = buf.substring(1, buf.indexOf(':'));
+                        String ps = buf.substring(buf.indexOf(':') + 1);
+                        String sql = "SELECT * FROM ACCOUNT WHERE BANKID = ?";
                         PreparedStatement pstmt = c.prepareStatement(sql);
                         pstmt.setString(1, bankid);
-                        
+
                         ResultSet rs = pstmt.executeQuery();
                         if (rs.next()) {
                             if (rs.getString("PASSWORD").equals(ps)) {
@@ -731,15 +726,14 @@ public class ServerWindow extends JFrame {
                                 rs = pstmt.executeQuery();
                                 if (rs.next()) {
                                     sendMessage(id, "0");
-                                }
-                                else {
-                                	sql = "UPDATE USERS SET BANKID = ? WHERE id = ?";
-                                	pstmt = c.prepareStatement(sql);
-                                	pstmt.setString(1, bankid);
+                                } else {
+                                    sql = "UPDATE USERS SET BANKID = ? WHERE id = ?";
+                                    pstmt = c.prepareStatement(sql);
+                                    pstmt.setString(1, bankid);
                                     pstmt.setString(2, id);
 
                                     pstmt.executeUpdate();
-                                	sendMessage(id, "1");
+                                    sendMessage(id, "1");
                                 }
                             } else {
                                 //infoTxt.append(id + " connected to server. Wrong password.\n");
@@ -790,7 +784,7 @@ public class ServerWindow extends JFrame {
 //                            dataOut.writeUTF(out);
                             dataOut.writeInt(len);
                             dataOut.write(pic);
-                            dataOut.writeUTF( rs.getString("INFO") );
+                            dataOut.writeUTF(rs.getString("INFO"));
                             dataOut.writeUTF(String.valueOf(rs.getInt("TIME")));
 //                            dataOut.writeUTF(":P");
                             dataOut.writeUTF(String.valueOf(rs.getDouble("PRICE")));
@@ -802,9 +796,9 @@ public class ServerWindow extends JFrame {
 //                        ps.setString(1, buf.substring(1));
                         ResultSet rs = ps.executeQuery();
                         int seat = Integer.parseInt(buf.substring(1));
-                        if(rs.next()){
+                        if (rs.next()) {
                             String s = rs.getString("SEAT");
-                            s = s.substring(0,seat) + "1" + s.substring(seat+1);
+                            s = s.substring(0, seat) + "1" + s.substring(seat + 1);
                             sql = "UPDATE HALL SET SEAT= ? WHERE ID = 1";
                             ps = c.prepareStatement(sql);
                             ps.setString(1, s);
@@ -817,13 +811,13 @@ public class ServerWindow extends JFrame {
                         ps.setString(2, "1");
                         Timestamp ts = new Timestamp(System.currentTimeMillis());
                         ps.setTimestamp(3, ts);
-                        ps.setInt(4,seat);
+                        ps.setInt(4, seat);
                         ps.executeUpdate();
-                    } else if(buf.charAt(0) == 'Q'){
+                    } else if (buf.charAt(0) == 'Q') {
                         sendMessage(id, "000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111");
                     }
                     /*else if (buf.charAt(0) == 'M') {
-                    	String user = buf.substring(1, buf.indexOf(':'));
+                        String user = buf.substring(1, buf.indexOf(':'));
                     	String time = buf.substring(buf.indexOf(':') + 1);
                     	String sql = "SELECT SEAT FROM RECORD WHERE USER = ? AND HALL = ?";               
                     	PreparedStatement ps = c.prepareStatement(sql);
@@ -1041,7 +1035,7 @@ public class ServerWindow extends JFrame {
             updateTable();
         } catch (SQLException e) {
             e.printStackTrace();
-        } catch (Exception e){
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Time should be an integer.\nPrice should be a double number.", "Error", JOptionPane.WARNING_MESSAGE);
         }
     }
