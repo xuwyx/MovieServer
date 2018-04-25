@@ -141,7 +141,7 @@ public class ServerWindow extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int row = table.getSelectedRow();
-                String value = (String) hallTableModel.getValueAt(row, 0);
+                String value = (String) tableModel.getValueAt(row, 0);
                 selectedId = value;
                 String sql = "DELETE FROM MOVIE WHERE ID=?";
                 try {
@@ -797,28 +797,30 @@ public class ServerWindow extends JFrame {
                             dataOut.flush();
                         }
                     } else if (buf.charAt(0) == 'P') {
-                        String sql = "SELECT SEAT FROM HALL WHERE ID = ?";
+                        String sql = "SELECT SEAT FROM HALL WHERE ID = 1";
                         PreparedStatement ps = c.prepareStatement(sql);
-                        ps.setString(1, buf.substring(1, buf.indexOf(':')));
+//                        ps.setString(1, buf.substring(1));
                         ResultSet rs = ps.executeQuery();
-                        int seat = Integer.parseInt(buf.substring(buf.indexOf(':')+1));
+                        int seat = Integer.parseInt(buf.substring(1));
                         if(rs.next()){
                             String s = rs.getString("SEAT");
                             s = s.substring(0,seat) + "1" + s.substring(seat+1);
-                            sql = "UPDATE HALL SET SEAT= ? WHERE ID = ?";
+                            sql = "UPDATE HALL SET SEAT= ? WHERE ID = 1";
                             ps = c.prepareStatement(sql);
                             ps.setString(1, s);
-                            ps.setString(2, buf.substring(1, buf.indexOf(':')));
+//                            ps.setString(2, buf.substring(1, buf.indexOf(':')));
                             ps.executeUpdate();
                         }
                         sql = "INSERT INTO RECORD VALUES(?,?,?,NULL,?)";
                         ps = c.prepareStatement(sql);
                         ps.setString(1, id);
-                        ps.setString(2, buf.substring(1, buf.indexOf(':')));
+                        ps.setString(2, "1");
                         Timestamp ts = new Timestamp(System.currentTimeMillis());
                         ps.setTimestamp(3, ts);
                         ps.setInt(4,seat);
                         ps.executeUpdate();
+                    } else if(buf.charAt(0) == 'Q'){
+                        sendMessage(id, "000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111000001111100000111110000011111");
                     }
                     /*else if (buf.charAt(0) == 'M') {
                     	String user = buf.substring(1, buf.indexOf(':'));
